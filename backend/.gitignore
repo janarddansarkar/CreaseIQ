@@ -8,3 +8,4 @@ chroma_db/
 data/source_documents/
 .DS_Store
 kb/
+vector_db/

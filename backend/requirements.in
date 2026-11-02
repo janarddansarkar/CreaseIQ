@@ -11,7 +11,12 @@ python-dotenv
 
 # RAG
 chromadb
+fastembed   # ONNX cross-encoder reranker
 pymupdf
+
+# Web search (non-cricket branch)
+ddgs
+httpx
 
 # Dev / test
 pytest
