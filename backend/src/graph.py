@@ -1,11 +1,12 @@
 """Builds the LangGraph StateGraph from the architecture diagram."""
 from __future__ import annotations
 
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 
 import nodes as n
 import rag
+from memory import MemoryStore, get_store
 import routers as r
 from guardrails import input_guard, output_guard
 from route import load_or_initialize_state, understand_and_route
@@ -25,8 +26,8 @@ NODES = {
 GUARDRAIL_ADDITIONS = {"input_guard", "output_guard"}      # not in the architecture diagram
 
 
-def build_graph(checkpointer=None):
-    """Wire all nodes and edges of the architecture diagram and compile the graph (an in-memory checkpointer by default)."""
+def build_graph(checkpointer=None, store: MemoryStore | None = None):
+    """Wire all nodes and edges of the architecture diagram and compile the graph (a SqliteSaver on the memory store's database by default)."""
     b = StateGraph(CreaseState)
     for name, fn in NODES.items():
         b.add_node(name, fn)
@@ -60,4 +61,4 @@ def build_graph(checkpointer=None):
     b.add_edge("save_final_state", END)
     b.add_edge("handle_insufficient_evidence", END)
     b.add_edge("handle_error", END)
-    return b.compile(checkpointer=checkpointer or InMemorySaver())
+    return b.compile(checkpointer=checkpointer or SqliteSaver((store or get_store()).conn))

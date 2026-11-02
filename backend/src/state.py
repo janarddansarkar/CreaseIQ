@@ -63,4 +63,9 @@ class CreaseState(TypedDict, total=False):
     unsupported_reason: Optional[str]
     error: Optional[str]
     pii_found: list[str]
+    profile: dict                                   # long-term memory of the user: preferred_format, preferred_language, topics
+    memory_format: Optional[str]                    # remembered format offered to this turn when the message names none
+    format_from_memory: bool                        # the remembered format was actually used (the answer says so)
+    history: str                                    # fenced digest of the user's recent turns (routing step only)
+    prior_turn: Optional[dict]                      # digest of the last answered rules turn, for resolving follow-ups
     blocked_reason: Optional[str]                   # why input_guard / output_guard stopped the turn (internal; never shown to users)

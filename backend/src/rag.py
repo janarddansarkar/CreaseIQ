@@ -45,7 +45,8 @@ def build_citations(chunk_ids: list[str], passages: list[dict]) -> list[dict]:
 def render_answer(state, body: str, citations: list[dict]) -> str:
     """Append the Sources line and the disclaimer to the answer body."""
     src = "; ".join(f"{c.get('source_title', '?')}, clause {c.get('clause_number', '?')}, p.{c.get('printed_page_start', '?')}" for c in citations)
-    return f"{body}\n\n{S(state, 'sources')}: {src}\n\n{S(state, 'disclaimer')}"
+    note = S(state, "memory_format_note").format(fmt=state["format"]) + "\n\n" if state.get("format_from_memory") else ""
+    return f"{note}{body}\n\n{S(state, 'sources')}: {src}\n\n{S(state, 'disclaimer')}"
 
 
 # ---- retrieval -------------------------------------------------------------------------------------------------

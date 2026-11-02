@@ -1,5 +1,6 @@
 # Orchestration
 langgraph
+langgraph-checkpoint-sqlite   # SQLite checkpointer + memory store
 langchain-core
 langchain-openai   # OpenAI-compatible adapter for Sarvam (pending compatibility test)
 
