@@ -1,0 +1,24 @@
+# Orchestration
+langgraph
+langchain-core
+langchain-openai   # OpenAI-compatible adapter for Sarvam (pending compatibility test)
+
+# Backend API
+fastapi
+uvicorn[standard]
+pydantic-settings
+python-dotenv
+
+# RAG
+chromadb
+pymupdf
+
+# Dev / test
+pytest
+pytest-asyncio
+httpx
+ruff
+langchain
+ipykernel
+nbformat
+nbclient

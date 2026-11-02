@@ -1,0 +1,3 @@
+.DS_Store
+# Official rule documents: do not commit unless licence permits (spec section 20)
+docs/*.pdf
