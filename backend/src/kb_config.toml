@@ -1,0 +1,31 @@
+# CreaseIQ knowledge-base config. Relative paths resolve against the project root (CreaseIQ/).
+
+[paths]
+docs_dir   = "docs"                  # folder scanned for *.pdf
+kb_dir     = "backend/kb"            # generated indexes live here
+chroma_dir = "backend/kb/chroma"
+bm25_path  = "backend/kb/bm25.json"
+
+[chunking]
+chunk_words   = 220                  # target words per chunk
+overlap_words = 40                   # words shared between consecutive chunks
+
+[semantic]
+collection      = "creaseiq_rules"
+distance_metric = "cosine"           # cosine | l2 | ip
+embed_batch     = 64                 # chunks embedded per Chroma add() call
+
+[bm25]
+k1 = 1.5
+b  = 0.75
+stopwords = [
+  "a", "an", "and", "are", "as", "at", "be", "but", "by", "for", "if", "in", "into", "is", "it",
+  "its", "of", "on", "or", "such", "that", "the", "their", "then", "there", "these", "they",
+  "this", "to", "was", "will", "with",
+]
+
+[retrieval]
+default_k  = 5
+default_mode = "hybrid"              # hybrid | bm25 | semantic
+candidates = 30                      # per-retriever candidates fed into fusion
+rrf_k      = 60                      # Reciprocal Rank Fusion constant
