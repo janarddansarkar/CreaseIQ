@@ -26,7 +26,8 @@ def load_or_initialize_state(state):
     out = {"question": last_user, "is_follow_up": follow_up, "retrieval_attempt": 0, "repair_attempt": 0, "retrieved_rules": [], "retrieval_plan": [],
            "evidence_status": "pending", "insufficient_reason": None, "analysis": None, "citations": [], "answer": "", "answer_body": "",
            "validation_status": "pending", "validation_issues": [], "web_results": [], "web_sources": [], "error": None, "unsupported_reason": None,
-           "status": "pending", "clarification_question": None, "blocked_reason": None, "format_from_memory": False, "memory_format": None}
+           "status": "pending", "clarification_question": None, "blocked_reason": None, "format_from_memory": False, "memory_format": None,
+           "cache_status": "off", "cache_similarity": None, "cache_query": None}
     keep = 2 * settings.memory.max_turns - 1       # short-term memory: last max_turns turns (user message + reply); -1 leaves room for this turn's reply
     old = state["messages"]
     if len(old) > keep:

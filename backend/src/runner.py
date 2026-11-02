@@ -32,10 +32,10 @@ def ask(graph, text: str, user_id: str, language: Optional[str] = None, show: bo
         fmt = v.get("format") if v.get("format") in SUPPORTED_FORMATS else None
         store.update_profile(user_id, fmt=fmt, language=v.get("response_language"), topic=v.get("clause_number") or v.get("normalized_english_query", "")[:80] or None)
     store.prune_checkpoints(user_id)
-    out = {"status": v["status"], "answer": v["answer"], "path": path, "values": v}
+    out = {"status": v["status"], "answer": v["answer"], "path": path, "values": v, "cache_status": v.get("cache_status"), "cache_similarity": v.get("cache_similarity")}
     if show:
         print("> " + clean)
         print("  path:  " + " -> ".join(path))
-        print(f"  status: {v['status']}" + (f" ({v['insufficient_reason']})" if v["status"] == "insufficient_evidence" else "") + (f" | error: {v['error']}" if v.get("error") else ""))
+        print(f"  status: {v['status']}" + (f" ({v['insufficient_reason']})" if v["status"] == "insufficient_evidence" else "") + (f" | error: {v['error']}" if v.get("error") else "") + f" | cache: {v.get('cache_status')}")
         print("  answer: " + v["answer"].replace("\n", "\n          ") + "\n")
     return out

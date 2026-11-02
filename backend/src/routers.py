@@ -27,9 +27,14 @@ def route_scope(state) -> Literal["handle_unsupported", "context_gate"]:
     return "handle_unsupported" if state.get("unsupported_reason") else "context_gate"
 
 
-def route_context(state) -> Literal["clarification_gate", "retrieve_rules"]:
-    """Missing decisive facts go to clarification; otherwise retrieval starts."""
-    return "clarification_gate" if state.get("missing_facts") else "retrieve_rules"
+def route_context(state) -> Literal["clarification_gate", "cache_lookup"]:
+    """Missing decisive facts go to clarification; otherwise the response cache is checked before retrieval starts."""
+    return "clarification_gate" if state.get("missing_facts") else "cache_lookup"
+
+
+def route_after_cache(state) -> Literal["save_final_state", "retrieve_rules"]:
+    """A cache hit is already a verified answer and is saved directly; a miss (or cache error) continues to retrieval."""
+    return "save_final_state" if state.get("cache_status") == "hit" else "retrieve_rules"
 
 
 def route_clarification(state) -> Literal["ask_clarification", "handle_insufficient_evidence"]:

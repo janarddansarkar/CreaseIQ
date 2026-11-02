@@ -6,6 +6,7 @@ from langgraph.graph import END, START, StateGraph
 
 import nodes as n
 import rag
+from cache import cache_lookup, cache_store
 from memory import MemoryStore, get_store
 import routers as r
 from guardrails import input_guard, output_guard
@@ -22,8 +23,9 @@ NODES = {
     "generate_answer": rag.generate_answer, "validate_final_answer": rag.validate_final_answer, "constrained_repair": rag.constrained_repair,
     "save_final_state": rag.save_final_state, "handle_insufficient_evidence": n.handle_insufficient_evidence, "handle_error": n.handle_error,
     "input_guard": input_guard, "output_guard": output_guard,      # additions: Phase 1 guardrails
+    "cache_lookup": cache_lookup, "cache_store": cache_store,      # additions: Redis response cache
 }
-GUARDRAIL_ADDITIONS = {"input_guard", "output_guard"}      # not in the architecture diagram
+GUARDRAIL_ADDITIONS = {"input_guard", "output_guard", "cache_lookup", "cache_store"}      # not in the architecture diagram
 
 
 def build_graph(checkpointer=None, store: MemoryStore | None = None):
@@ -43,7 +45,8 @@ def build_graph(checkpointer=None, store: MemoryStore | None = None):
     b.add_edge("handle_non_cricket", END)
     b.add_conditional_edges("scope_gate", r.route_scope, ["handle_unsupported", "context_gate"])   # Supported format and source scope?
     b.add_edge("handle_unsupported", END)
-    b.add_conditional_edges("context_gate", r.route_context, ["clarification_gate", "retrieve_rules"])   # Decisive facts complete?
+    b.add_conditional_edges("context_gate", r.route_context, ["clarification_gate", "cache_lookup"])   # Decisive facts complete?
+    b.add_conditional_edges("cache_lookup", r.route_after_cache, ["save_final_state", "retrieve_rules"])   # Similar question already answered (Redis)?
     b.add_conditional_edges("clarification_gate", r.route_clarification, ["ask_clarification", "handle_insufficient_evidence"])   # Clarifications left?
     b.add_edge("ask_clarification", "save_clarification_state")
     b.add_edge("save_clarification_state", END)
@@ -58,7 +61,8 @@ def build_graph(checkpointer=None, store: MemoryStore | None = None):
                             ["handle_error", "output_guard", "constrained_repair", "handle_insufficient_evidence"])   # Answer and citations valid?
     b.add_conditional_edges("output_guard", r.route_after_output, ["save_final_state", "constrained_repair", "handle_unsupported"])   # Reply passes output checks?
     b.add_conditional_edges("constrained_repair", r.continue_or_error("validate_final_answer"), ["validate_final_answer", "handle_error"])
-    b.add_edge("save_final_state", END)
+    b.add_edge("save_final_state", "cache_store")
+    b.add_edge("cache_store", END)
     b.add_edge("handle_insufficient_evidence", END)
     b.add_edge("handle_error", END)
     return b.compile(checkpointer=checkpointer or SqliteSaver((store or get_store()).conn))

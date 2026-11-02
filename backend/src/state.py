@@ -68,4 +68,7 @@ class CreaseState(TypedDict, total=False):
     format_from_memory: bool                        # the remembered format was actually used (the answer says so)
     history: str                                    # fenced digest of the user's recent turns (routing step only)
     prior_turn: Optional[dict]                      # digest of the last answered rules turn, for resolving follow-ups
+    cache_status: str                               # hit | miss | off | error
+    cache_similarity: Optional[float]
+    cache_query: Optional[str]                      # the earlier question a cache hit was served for
     blocked_reason: Optional[str]                   # why input_guard / output_guard stopped the turn (internal; never shown to users)

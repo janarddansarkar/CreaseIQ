@@ -12,6 +12,7 @@ python-dotenv
 
 # RAG
 chromadb
+redis        # response cache
 fastembed   # ONNX cross-encoder reranker
 pymupdf
 

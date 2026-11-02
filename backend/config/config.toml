@@ -78,6 +78,18 @@ question_chars     = 160             # a stored question / normalised query is c
 gist_chars         = 200             # a stored answer conclusion is cut to this
 old_question_words = 12              # words of the question kept in an older turn's one-liner
 
+[settings.cache]                             # Redis semantic response cache (fail-open: Redis being down never breaks an answer)
+enabled        = true
+url_env        = "REDIS_URL"
+url_default    = "redis://localhost:6379"
+prefix         = "creaseiq"          # override with $CREASEIQ_CACHE_PREFIX (tests)
+ttl_seconds    = 604800              # entries expire after 7 days
+similarity     = 0.75                # cosine of the query embeddings needed for a hit (same format/language/intent bucket)
+min_term_overlap = 0.75              # AND the key terms (content words) of both questions must overlap this much (Jaccard): a changed decisive fact
+                                     # such as 'run out' vs 'bowled' scores like a paraphrase on embeddings alone, so cosine is never trusted by itself
+max_entries_per_bucket = 200         # oldest entries are evicted beyond this
+connect_timeout = 0.5                # seconds; a dead Redis is skipped quickly
+
 [settings.stub]                               # offline stand-in model
 max_cited_passages = 2
 max_quote_chars    = 300             # the stub quotes only this much of each passage
@@ -97,6 +109,11 @@ T20I = "search_t20i_rules"
 [lexicon.format_patterns]                              # how a format is recognised in text
 ODI  = '\bodis?\b|one[- ]day|वनडे'
 T20I = '\bt20is?\b|\bt20\b|twenty[- ]?20|टी-?20'
+
+[lexicon.cache]
+ignore_words = ["what", "whats", "how", "does", "do", "can", "could", "would", "should", "explain", "tell", "me", "about", "rule", "rules", "work",
+                "works", "mean", "means", "match", "matches", "cricket", "game", "please", "i", "my", "you", "we", "there", "when", "which", "who", "why",
+                "odi", "t20i", "t20", "playing", "conditions", "condition", "happens", "happen", "allowed", "allow", "apply", "per"]
 
 [lexicon.routing]
 compare_pattern = 'differ|difference|compare|comparison|versus|\bvs\b|अंतर'
@@ -216,6 +233,7 @@ unsupported_too_long = "Your message is too long. Please shorten it to one clear
 unsupported_script = "I can reply in English and Hindi only. Please ask your question in one of these languages."
 unsupported_policy = "I can't help with that request. Please rephrase it as a question about men's ODI or T20I cricket rules."
 unsupported_output_blocked = "I couldn't produce a safe answer to that. Please try rephrasing your question."
+cache_hit_label = "⚡ Cache hit: answered from Redis (similar to an earlier question: “{q}”, similarity {sim})."
 memory_format_note = "Using {fmt}, as in your earlier questions. Name the other format in your question to switch."
 disclaimer = "This is an informational interpretation of the cited playing conditions, not an official ruling by the match officials."
 fact_format = "the match format (ODI or T20I)"
@@ -240,6 +258,7 @@ unsupported_too_long = "आपका संदेश बहुत लंबा �
 unsupported_script = "मैं अभी केवल अंग्रेज़ी और हिन्दी में उत्तर दे सकता हूँ। कृपया इनमें से किसी एक भाषा में प्रश्न पूछें।"
 unsupported_policy = "मैं इस अनुरोध में मदद नहीं कर सकता। कृपया इसे पुरुष ODI या T20I क्रिकेट नियमों के प्रश्न के रूप में दोबारा लिखें।"
 unsupported_output_blocked = "मैं इसका सुरक्षित उत्तर नहीं दे सका। कृपया प्रश्न को दूसरे तरीके से लिखें।"
+cache_hit_label = "⚡ कैश हिट: उत्तर Redis से दिया गया है (पहले पूछे गए समान प्रश्न “{q}” के आधार पर, समानता {sim})।"
 memory_format_note = "आपके पिछले प्रश्नों की तरह {fmt} मानकर उत्तर दिया गया है। दूसरे प्रारूप के लिए प्रश्न में उसका नाम लिखें।"
 disclaimer = "यह उद्धृत प्लेइंग कंडीशंस की एक सूचनात्मक व्याख्या है, मैच अधिकारियों का आधिकारिक निर्णय नहीं।"
 fact_format = "मैच का प्रारूप (ODI या T20I)"
