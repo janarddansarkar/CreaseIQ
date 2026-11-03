@@ -34,8 +34,11 @@ def test_clause_lookup(agent):
 
 def test_compare_cites_both_formats(agent):
     out = agent("Compare the free hit rule in ODI and T20I")
-    assert out["status"] == "answered" and out["values"]["intent"] == "compare"
-    assert {c["format"] for c in out["values"]["citations"]} == {"ODI", "T20I"}
+    v = out["values"]
+    assert out["status"] == "answered" and v["intent"] == "compare"
+    strong = {p["format"] for p in v["retrieved_rules"] if p["retrieval_score"] >= settings.retrieval.min_score}
+    assert strong == {"ODI", "T20I"}                                              # evidence from BOTH formats was retrieved and counted
+    assert v["citations"] and {c["format"] for c in v["citations"]} <= {"ODI", "T20I"}      # (the stub cites only the first two passages, so which formats it cites is not asserted)
 
 
 def test_hindi_reply_language_uses_hindi_fixed_text(agent):
@@ -228,3 +231,30 @@ def test_agent_still_answers_when_redis_is_down(agent, monkeypatch):
     monkeypatch.setattr(cache, "_CACHE", c)
     out = agent("How many overs can one bowler bowl in T20I?", user="x5")
     assert out["status"] == "answered" and out["cache_status"] == "error"
+
+
+# ---- retrieval query hygiene -------------------------------------------------------------------------------------
+def test_the_search_tool_never_receives_the_format_name(agent, monkeypatch):
+    """The tool already searches one format; the name in the query used to inflate the reranker score of unrelated passages."""
+    import rag
+    seen = []
+    real = rag.TOOLS["search_t20i_rules"]
+
+    class Spy:
+        def invoke(self, args):
+            seen.append(args["query"])
+            return real.invoke(args)
+    monkeypatch.setitem(rag.TOOLS, "search_t20i_rules", Spy())
+    out = agent("In T20I, how many overs can one bowler bowl in an innings?")
+    assert out["status"] == "answered" and seen and all("t20i" not in q.lower() for q in seen)
+
+
+@pytest.mark.parametrize("question", [
+    "What is the strategic timeout rule in T20I?",
+    "What is the dress code for the umpires in an ODI match?",
+    "How are crowd disturbances handled in a T20I stadium?",
+])
+def test_off_corpus_questions_that_name_a_format_abstain_instead_of_guessing(agent, question):
+    out = agent(question)
+    assert out["status"] == "insufficient_evidence" and out["values"]["insufficient_reason"] == "weak_evidence"
+    assert "analyse_scenario" not in out["path"]

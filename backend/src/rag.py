@@ -18,6 +18,21 @@ _REF_STRIP = LEXICON["routing"]["answer_ref_strip_chars"]
 _CITATION_FIELDS = ("source_id", "source_title", "version", "format", "clause_number", "printed_page_start")
 
 
+# ---- retrieval query ---------------------------------------------------------------------------------------------
+_FMT = "|".join(f"(?:{p})" for p in LEXICON["format_patterns"].values())
+_FORMAT_MENTION = re.compile(rf"(?:\b(?:in|for|under|during|of)\s+)?(?:\b(?:an?|the)\s+)?(?:{_FMT})(?:\s+(?:match(?:es)?|games?|cricket|internationals?|format|rules?))?", re.I)
+_DANGLING = re.compile(r"(?:\s+\b(?:in|for|under|during|of|an?|the|and|or|vs|versus|with)\b)+\s*[?.!]*$", re.I)
+
+
+def search_query(query: str) -> str:
+    """The query sent to a format's search tool, without the format name. The tool already searches only that format, and the name is pure noise there:
+    it made the reranker score unrelated passages as relevant ('strategic timeout rule in T20I' reached 0.26 > min_score although the topic is not in the
+    corpus; 'dress code for the umpires in T20I' reached 0.91). Falls back to the original when nothing but the format name would be left."""
+    cleaned = re.sub(r"\s+([?.!,;:])", r"\1", re.sub(r"\s+", " ", _FORMAT_MENTION.sub(" ", query))).strip(" ,;:-")
+    cleaned = re.sub(r"^(?:\b(?:and|or|vs|versus|with|in|for)\b\s*)+", "", _DANGLING.sub("", cleaned), flags=re.I).strip(" ,;:-")
+    return cleaned if re.search(r"\w", cleaned) else query
+
+
 # ---- evidence formatting ---------------------------------------------------------------------------------------
 def numbered_evidence(passages: list[dict]) -> str:
     """Format passages as '[chunk_id | clause N | format] text' lines for the model."""
@@ -55,7 +70,7 @@ def render_answer(state, body: str, citations: list[dict]) -> str:
 def retrieve_rules(state):
     """Deterministic tool selection from the resolved format; the model never chooses between formats."""
     names = LEXICON["format_tools"]
-    q, fmt, intent, k = state["normalized_english_query"], state.get("format"), state.get("intent"), settings.retrieval.top_k
+    q, fmt, intent, k = search_query(state["normalized_english_query"]), state.get("format"), state.get("intent"), settings.retrieval.top_k
     if intent == "compare":
         plan = [{"tool": names[f], "args": {"query": q, "top_k": k}} for f in SUPPORTED_FORMATS]
     elif intent == "clause_lookup":

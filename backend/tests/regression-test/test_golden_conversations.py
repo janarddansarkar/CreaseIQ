@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from config import STRINGS
+from config import STRINGS, settings
 
 CASES = json.loads((Path(__file__).parent / "golden" / "conversations.json").read_text())["cases"]
 
@@ -24,6 +24,9 @@ def test_golden_conversation(case, agent, fake_web):
         cites = v.get("citations") or []
         if "citation_formats" in e:
             assert {c["format"] for c in cites} == set(e["citation_formats"]), f"{where}: citation formats"
+        if "retrieved_formats" in e:
+            strong = {p["format"] for p in v.get("retrieved_rules", []) if p["retrieval_score"] >= settings.retrieval.min_score}
+            assert strong == set(e["retrieved_formats"]), f"{where}: formats with strong evidence {strong}"
         for clause in e.get("citation_clauses_include", []):
             assert clause in {c["clause_number"] for c in cites}, f"{where}: clause {clause} not cited"
         low = out["answer"].lower()

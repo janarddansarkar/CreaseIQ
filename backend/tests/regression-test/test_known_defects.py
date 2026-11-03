@@ -11,6 +11,7 @@ REG-008  PII questions and failed answers must never be cached
 REG-009  evicting a user left that user's graph checkpoints behind
 REG-010  the stream's step events must equal the executed node path
 REG-011  tests must never touch the real memory database
+REG-012  an off-corpus question naming a format was answered from unrelated passages (format name inflated the reranker score)
 """
 import fakeredis
 import pytest
@@ -18,6 +19,7 @@ import pytest
 import cache
 import rag
 import route
+import tools
 from config import settings
 from memory import MemoryStore
 from route import UNKNOWN, detect_format
@@ -168,3 +170,21 @@ def test_reg011_the_suite_never_touches_the_real_memory_database():
     real = memory.BACKEND.parent / "backend" / "data" / "memory.sqlite"
     assert memory.default_db_path() != real and "creaseiq-tests-" in str(memory.default_db_path())
     assert cache.get_cache().prefix == "creaseiq-test"
+
+
+# ---- REG-012 ---------------------------------------------------------------------------------------------------
+@pytest.mark.parametrize("question", [
+    "What is the strategic timeout rule in T20I?",      # scored 0.26 (> min_score 0.2) with the format name, 0.00 without
+    "What is the dress code for the umpires in an ODI match?",      # scored up to 0.94
+])
+def test_reg012_naming_the_format_must_not_turn_an_off_corpus_question_into_evidence(agent, question):
+    out = agent(question)
+    assert out["status"] == "insufficient_evidence" and out["values"]["insufficient_reason"] == "weak_evidence"
+
+
+def test_reg012_the_format_name_does_not_reach_the_reranker():
+    q = "What is the dress code for the umpires in an T20I match?"      # not in the corpus; the raw query scored 0.89 purely because of the format name
+    t = tools.TOOLS["search_t20i_rules"]
+    with_name = t.invoke({"query": q, "top_k": 3})[0]["retrieval_score"]
+    without = t.invoke({"query": rag.search_query(q), "top_k": 3})[0]["retrieval_score"]
+    assert with_name >= settings.retrieval.min_score > without      # documents the bug: the raw query cleared the evidence bar, the cleaned one does not

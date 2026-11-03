@@ -125,3 +125,29 @@ def test_requery_falls_back_to_reformulation(monkeypatch):
                     ("T20I overs per bowler", "en")):             # identical to the current query: nothing new to try
         out = rag.requery_original({**BASE, "question": q, "input_language": lang})
         assert out["normalized_english_query"] == "reformulated" and out["retrieval_attempt"] == 1 and out["repair_attempt"] == 0, q
+
+
+# ---- search_query: the format name is removed from the query sent to a (format-specific) search tool ------------------------
+@pytest.mark.parametrize("query,expected", [
+    ("What is the strategic timeout rule in T20I?", "What is the strategic timeout rule?"),
+    ("In T20I, how many overs can one bowler bowl in an innings?", "how many overs can one bowler bowl in an innings?"),
+    ("How many overs in ODIs?", "How many overs?"),
+    ("What is the dress code for the umpires in an T20I match?", "What is the dress code for the umpires?"),
+    ("What happens in a one day international if rain stops play?", "What happens if rain stops play?"),
+    ("T20I overs per bowler in an innings", "overs per bowler in an innings"),
+    ("Compare the free hit rule in ODI and T20I", "Compare the free hit rule"),
+    ("ODI vs T20I powerplay", "powerplay"),
+    ("टी-20 में पावरप्ले", "में पावरप्ले"),
+    ("What does the rule say about a free hit", "What does the rule say about a free hit"),      # nothing to remove
+])
+def test_search_query_removes_the_format_name(query, expected):
+    assert rag.search_query(query) == expected
+
+
+@pytest.mark.parametrize("query", ["T20I", "the T20I rules", "ODI", "in ODIs"])
+def test_search_query_keeps_the_original_when_only_the_format_would_be_left(query):
+    assert rag.search_query(query) == query
+
+
+def test_search_query_does_not_touch_look_alike_words():
+    assert rag.search_query("Android godis t200 runs") == "Android godis t200 runs"

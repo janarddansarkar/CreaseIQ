@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import rag
 import tools
 from config import settings
 
@@ -12,7 +13,7 @@ TOOL = {"T20I": "search_t20i_rules", "ODI": "search_odi_rules"}
 
 
 def top(case, k=3):
-    return tools.TOOLS[TOOL[case["format"]]].invoke({"query": case["query"], "top_k": k})
+    return tools.TOOLS[TOOL[case["format"]]].invoke({"query": rag.search_query(case["query"]), "top_k": k})
 
 
 @pytest.mark.parametrize("case", G["recall"], ids=[f"{c['format']}-{c['query'][:35]}" for c in G["recall"]])

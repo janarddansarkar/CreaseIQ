@@ -10,7 +10,7 @@ The three kinds of test answer three different questions. Everything here runs o
 | Written from | The code's contract | A user's or system's flow | A past bug or a behaviour worth freezing |
 | Fails when | A function's logic is wrong | Components disagree or a flow breaks | An earlier fix is undone, or output drifts |
 | Speed | ~2 s | ~13 s | ~10 s |
-| Count | 175 | 74 (+4 live) | 77 |
+| Count | 190 | 78 (+4 live) | 86 |
 
 A bug usually shows up in more than one level. A unit test tells you *where*, an integration test tells you *that a flow broke*, and a regression test stops it *coming back*.
 
@@ -33,7 +33,7 @@ Example here: `resolve_citation("[chunk | clause 21.18 | T20I]", passages)` shou
 | `test_context.py` | Conversation digests, which past turns are usable, follow-up detection, the history block, its token budget and prompt-injection fence |
 | `test_memory.py` | SQLite memory: the 25-user and 25-turn caps, eviction, long-term profile, topic limit, deletion, old-schema migration |
 | `test_cache.py` | The Redis semantic cache (with fakeredis): hits, buckets, clause matching, key-term guard, expiry, eviction, and that Redis failure never breaks an answer |
-| `test_rag_helpers.py` | Evidence formatting, citation resolution, the sufficient-evidence check, answer validation, query reformulation and the original-wording retry |
+| `test_rag_helpers.py` | Evidence formatting, the format-free search query, citation resolution, the sufficient-evidence check, answer validation, query reformulation and the original-wording retry |
 | `test_llm_stub.py` | The offline stand-in model and the structured-output retry logic |
 | `test_web_tools.py` | Web-search plumbing (provider dispatch, Tavily parsing, missing key), with no network |
 | `test_api_models.py` | Request validation (length, id pattern) and SSE framing |
@@ -61,8 +61,8 @@ Example here: with an earlier ODI question in the conversation, the next T20I qu
 
 | File | What it guards in CreaseIQ |
 |---|---|
-| `test_known_defects.py` | One test per fixed bug (`REG-001` to `REG-011`): plural `T20Is`, history rewording a self-contained question, citations copied as a whole evidence header, the retry using `And in ODI?`, the repair budget not resetting, Redis outage, the cache serving a changed fact, PII or failed answers being cached, evicted users' checkpoints, the stream's step events |
-| `test_golden_conversations.py` + `golden/conversations.json` | 15 recorded conversations (answers, clarification, refusals, follow-ups, cache hit, abstention, web branch, Hindi) with their expected status, format, citations and path |
+| `test_known_defects.py` | One test per fixed bug (`REG-001` to `REG-012`): plural `T20Is`, history rewording a self-contained question, citations copied as a whole evidence header, the retry using `And in ODI?`, the repair budget not resetting, Redis outage, the cache serving a changed fact, PII or failed answers being cached, evicted users' checkpoints, the stream's step events, an off-corpus question that names a format being answered from unrelated passages |
+| `test_golden_conversations.py` + `golden/conversations.json` | 17 recorded conversations (answers, clarification, refusals, follow-ups, cache hit, abstention, web branch, Hindi) with their expected status, format, citations and path |
 | `test_retrieval_golden.py` + `golden/retrieval.json` | The knowledge base still returns the right passage for known questions, and off-topic questions still score below the evidence threshold, so the agent abstains |
 | `test_routing_snapshot.py` | A table of phrasings and the routing decision each must produce (plurals, Hindi names, clause numbers, comparisons, unsupported scopes) |
 
