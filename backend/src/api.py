@@ -8,7 +8,7 @@ import os
 import uuid
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
@@ -22,6 +22,7 @@ log = logging.getLogger("creaseiq.api")
 app = FastAPI(title="CreaseIQ API", version="1.0")
 app.add_middleware(CORSMiddleware, allow_origins=[o.strip() for o in os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:5173").split(",")],
                    allow_methods=["*"], allow_headers=["*"])
+router = APIRouter(prefix="/api/v1")
 _GRAPH = None
 
 
@@ -61,19 +62,19 @@ class ChatResponse(BaseModel):
     error: Optional[str] = None
 
 
-@app.get("/api/v1/health")
+@router.get("/health")
 def health():
     """Liveness check."""
     return {"status": "ok"}
 
 
-@app.get("/api/v1/languages")
+@router.get("/languages")
 def languages():
     """Supported reply languages."""
     return {"languages": SUPPORTED_LANGUAGES}
 
 
-@app.get("/api/v1/formats")
+@router.get("/formats")
 def formats():
     """Supported match formats."""
     return {"formats": list(SUPPORTED_FORMATS)}
@@ -89,7 +90,7 @@ def _to_response(out: dict, rid: str, cid: str) -> ChatResponse:
                         web_sources=v.get("web_sources") or [], error="internal" if v.get("error") else None)
 
 
-@app.post("/api/v1/chat", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse)
 async def chat(req: ChatRequest):
     """Run one turn of the agent for this conversation (the conversation id is the memory thread / user id)."""
     rid, cid = uuid.uuid4().hex[:12], req.conversation_id or uuid.uuid4().hex[:16]
@@ -107,7 +108,7 @@ def _sse(event: str, data: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
-@app.post("/api/v1/chat/stream")
+@router.post("/chat/stream")
 async def chat_stream(req: ChatRequest):
     """Same turn as /chat, streamed as Server-Sent Events: `step` per graph node, then one `final` (the ChatResponse) or `error`."""
     rid, cid = uuid.uuid4().hex[:12], req.conversation_id or uuid.uuid4().hex[:16]
@@ -133,3 +134,6 @@ async def chat_stream(req: ChatRequest):
         await task
 
     return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+app.include_router(router)
