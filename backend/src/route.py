@@ -79,7 +79,7 @@ def understand_and_route(state):
     """Node: one structured model call extracts facts and queries; routing decisions are then made in code."""
     follow = state.get("is_follow_up", False)
     pending = state.get("original_question", "") if follow else ""
-    hist = state.get("history") or ""
+    hist = (state.get("history") or "") if (follow or is_followup(state["question"])) else ""      # history only completes elliptical follow-ups; a self-contained question must not be reworded by it
     user = "\n".join(([hist] if hist else []) + [f"KNOWN_FACTS: {' | '.join(state.get('scenario_facts', []))}", f"PENDING_QUESTION: {pending}", f"MESSAGE: {state['question']}"])
     r: RouteResult = llm_structured("route", RouteResult, PROMPTS["route"], user)
     prior = state.get("prior_turn")

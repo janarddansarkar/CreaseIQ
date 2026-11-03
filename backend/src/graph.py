@@ -19,13 +19,13 @@ NODES = {
     "handle_non_cricket": n.handle_non_cricket, "scope_gate": n.scope_gate, "handle_unsupported": n.handle_unsupported,
     "context_gate": n.context_gate, "clarification_gate": n.clarification_gate, "ask_clarification": n.ask_clarification,
     "save_clarification_state": n.save_clarification_state, "retrieve_rules": rag.retrieve_rules, "retrieval_tools": rag.retrieval_tools,
-    "check_evidence": rag.check_evidence, "reformulate_query": rag.reformulate_query, "analyse_scenario": rag.analyse_scenario,
+    "check_evidence": rag.check_evidence, "reformulate_query": rag.reformulate_query, "requery_original": rag.requery_original, "analyse_scenario": rag.analyse_scenario,
     "generate_answer": rag.generate_answer, "validate_final_answer": rag.validate_final_answer, "constrained_repair": rag.constrained_repair,
     "save_final_state": rag.save_final_state, "handle_insufficient_evidence": n.handle_insufficient_evidence, "handle_error": n.handle_error,
     "input_guard": input_guard, "output_guard": output_guard,      # additions: Phase 1 guardrails
     "cache_lookup": cache_lookup, "cache_store": cache_store,      # additions: Redis response cache
 }
-GUARDRAIL_ADDITIONS = {"input_guard", "output_guard", "cache_lookup", "cache_store"}      # not in the architecture diagram
+GUARDRAIL_ADDITIONS = {"input_guard", "output_guard", "cache_lookup", "cache_store", "requery_original"}      # not in the architecture diagram (requery_original: retrieval retry after a failed repair)
 
 
 def build_graph(checkpointer=None, store: MemoryStore | None = None):
@@ -55,10 +55,11 @@ def build_graph(checkpointer=None, store: MemoryStore | None = None):
     b.add_conditional_edges("check_evidence", r.route_after_evidence,
                             ["analyse_scenario", "reformulate_query", "handle_insufficient_evidence"])   # check_evidence: sufficient?
     b.add_edge("reformulate_query", "retrieve_rules")                        # one retry loop
+    b.add_edge("requery_original", "retrieve_rules")                         # safety net: retry from the original wording after a failed repair
     b.add_conditional_edges("analyse_scenario", r.continue_or_error("generate_answer"), ["generate_answer", "handle_error"])
     b.add_conditional_edges("generate_answer", r.continue_or_error("validate_final_answer"), ["validate_final_answer", "handle_error"])
     b.add_conditional_edges("validate_final_answer", r.route_after_validation,
-                            ["handle_error", "output_guard", "constrained_repair", "handle_insufficient_evidence"])   # Answer and citations valid?
+                            ["handle_error", "output_guard", "constrained_repair", "requery_original", "handle_insufficient_evidence"])   # Answer and citations valid?
     b.add_conditional_edges("output_guard", r.route_after_output, ["save_final_state", "constrained_repair", "handle_unsupported"])   # Reply passes output checks?
     b.add_conditional_edges("constrained_repair", r.continue_or_error("validate_final_answer"), ["validate_final_answer", "handle_error"])
     b.add_edge("save_final_state", "cache_store")

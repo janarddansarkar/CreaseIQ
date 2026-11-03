@@ -8,6 +8,7 @@ from langchain_core.messages import AIMessage
 
 from common import S, safe_node
 from config import LEXICON, PROMPTS, SUPPORTED_FORMATS, settings
+from context import is_followup
 from llm import llm_structured, llm_text
 from state import Analysis
 from tools import TOOL_FORMAT, TOOLS
@@ -100,6 +101,15 @@ def reformulate_query(state):
     except Exception:
         new = old
     return {"normalized_english_query": new, "retrieval_attempt": state.get("retrieval_attempt", 0) + 1}
+
+
+def requery_original(state):
+    """Safety net after a failed repair: retry retrieval once from the user's own wording (English only), since a model-reworded query can miss passages.
+    Falls back to the model reformulation when the question is not English, is an elliptical follow-up (its raw wording lacks the carried context), or the query is already the original. Resets the repair budget for the new evidence."""
+    q = " ".join(str(state.get("question") or "").split())
+    if state.get("input_language") != "en" or not q or q == state["normalized_english_query"] or is_followup(q):
+        return {**reformulate_query(state), "repair_attempt": 0}
+    return {"normalized_english_query": q, "retrieval_attempt": state.get("retrieval_attempt", 0) + 1, "repair_attempt": 0}
 
 
 # ---- analysis / answer / validation ----------------------------------------------------------------------------
