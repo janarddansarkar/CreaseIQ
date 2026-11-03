@@ -184,3 +184,53 @@ def test_clauses_not_printed_as_headings_are_still_rejected(invented):
     state["answer"] = rag.render_answer(state, body, cites)
     out = rag.validate_final_answer(state)
     assert out["validation_status"] == "failed" and f"unknown_clause:{invented}" in out["validation_issues"]
+
+
+# ---- referenced_clauses: singular, plural, lists and ranges ------------------------------------------------------------------
+@pytest.mark.parametrize("text,expected", [
+    ("clause 13.9.1", ["13.9.1"]),
+    ("(clause 13.9.5).", ["13.9.5"]),
+    ("The follow-on is not allowed (clauses 14 and 15).", ["14", "15"]),
+    ("Clauses 14 AND 15", ["14", "15"]),
+    ("clauses 13.9.1, 13.9.2 and 13.9.3.", ["13.9.1", "13.9.2", "13.9.3"]),
+    ("clauses 13.7.1.1-13.7.1.4", ["13.7.1.1", "13.7.1.4"]),
+    ("clause 13.7.1.1-13.7.1.4", ["13.7.1.1", "13.7.1.4"]),
+    ("clauses 13.9.1 to 13.9.5", ["13.9.1", "13.9.5"]),
+    ("clauses 13.9.1 \u2013 13.9.5", ["13.9.1", "13.9.5"]),
+    ("clause 13.9.1 and 13.9.2", ["13.9.1", "13.9.2"]),
+    ("clause 13.9.1 and 4 overs", ["13.9.1"]),              # after a singular 'clause' only dotted numbers continue the list
+    ("clauses 14 and the rest", ["14"]),
+    ("see clause 13.9.1 and clause 13.9.1", ["13.9.1"]),    # de-duplicated
+    ("no references here", []),
+])
+def test_referenced_clauses(text, expected):
+    assert rag.referenced_clauses(text) == expected
+
+
+def test_clauses_referenced_by_a_passage_in_plural_form_are_allowed():
+    allowed = rag.allowed_clauses([P(clause="1.1", text="This applies as in clauses 6.1 and 6.2 and clauses 7.1-7.3.")])
+    assert {"6.1", "6.2", "7.1", "7.3"} <= allowed
+
+
+def _validate(body, passages):
+    cites = rag.build_citations([passages[0]["chunk_id"]], passages)
+    state = {"response_language": "en", "format": "T20I", "retrieved_rules": passages, "answer_body": body, "citations": cites}
+    state["answer"] = rag.render_answer(state, body, cites)
+    return rag.validate_final_answer(state)
+
+
+def test_plural_references_to_unretrieved_clauses_are_rejected():
+    out = _validate("The follow-on is not allowed (clauses 14 and 15).", [PAGE])
+    assert out["validation_status"] == "failed" and {"unknown_clause:14", "unknown_clause:15"} <= set(out["validation_issues"])
+
+
+def test_a_range_is_checked_at_both_ends():
+    ok = _validate("See clauses 13.9.1-13.9.2 for the limits.", [PAGE])
+    bad = _validate("See clauses 13.9.1-13.9.99 for the limits.", [PAGE])
+    assert ok["validation_status"] == "passed"
+    assert bad["validation_status"] == "failed" and bad["validation_issues"] == ["unknown_clause:13.9.99"]
+
+
+def test_a_list_with_one_invented_clause_is_rejected():
+    out = _validate("Clauses 13.9.1, 13.9.2 and 13.9.77 apply.", [PAGE])
+    assert out["validation_issues"] == ["unknown_clause:13.9.77"]

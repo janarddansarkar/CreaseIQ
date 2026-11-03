@@ -149,3 +149,22 @@ def test_an_invented_clause_number_is_still_rejected(agent, monkeypatch):
     script(monkeypatch, ["Under clause 13.9.99 a bowler may bowl four overs."])
     out = agent(Q)
     assert out["status"] == "insufficient_evidence" and out["values"]["validation_issues"] == ["unknown_clause:13.9.99"]
+
+
+# ---- plural / list clause references are validated too ---------------------------------------------------------------------
+def test_an_answer_citing_unretrieved_clauses_in_plural_form_is_repaired(agent, monkeypatch):
+    script(monkeypatch, ["Four overs, and the follow-on is not allowed (clauses 14 and 15).", "Under clause 13.9.1 a bowler may bowl four overs."])
+    out = agent(Q)
+    assert out["status"] == "answered" and "clauses 14" not in out["answer"] and count(out["path"], "constrained_repair") == 1
+
+
+def test_plural_invented_clauses_that_persist_end_in_abstention(agent, monkeypatch):
+    script(monkeypatch, ["Four overs (clauses 14 and 15)."])
+    out = agent(Q)
+    assert out["status"] == "insufficient_evidence" and "unknown_clause:14" in out["values"]["validation_issues"]
+
+
+def test_a_range_of_real_clauses_is_accepted(agent, monkeypatch):
+    calls = script(monkeypatch, ["Under clauses 13.9.1-13.9.2 a bowler may bowl four overs."])
+    out = agent(Q)
+    assert out["status"] == "answered" and len(calls) == 1

@@ -119,6 +119,7 @@ ignore_words = ["what", "whats", "how", "does", "do", "can", "could", "would", "
 compare_pattern = 'differ|difference|compare|comparison|versus|\bvs\b|अंतर'
 clause_pattern  = 'clause\s+([\w.\-]+)'
 clause_ref_pattern = 'clause\s+([A-Za-z0-9][\w.\-]*)'   # clause mentions inside a drafted answer
+clause_list_pattern = '\b(clauses?)\s+(\d[\w.]*(?:[-–]\d[\w.]*)?(?:\s*(?:,|;|and|or|&|to|[-–])\s*\d[\w.]*(?:[-–]\d[\w.]*)?)*)'   # 'clauses 14 and 15', 'clauses 13.7.1.1-13.7.1.4', 'clause 13.9.1 and 13.9.2'
 followup_pattern = '^\s*(?:and\b|also\b|what about\b|how about\b|what if\b|same\b|in that case\b|does that\b|do those\b|do they\b|is that\b|is it\b|और|तो|इसके बारे में)'   # an elliptical follow-up at the START of a message
 clause_strip_chars = ".-"
 answer_ref_strip_chars = ".,;)"

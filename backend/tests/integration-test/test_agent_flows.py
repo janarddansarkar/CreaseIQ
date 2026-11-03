@@ -123,6 +123,21 @@ def test_non_cricket_question_gets_a_labelled_web_answer(agent, fake_web):
     assert "retrieve_rules" not in out["path"]
 
 
+def test_web_answer_text_ends_with_a_sources_block_then_the_label(agent, fake_web):
+    """The UI hides those last two paragraphs because it shows the structured web sources as a panel (see tests/integration-test/frontend)."""
+    out = agent("Who won the football world cup?")
+    parts = out["answer"].split("\n\n")
+    assert len(parts) >= 3 and parts[-1] == STRINGS["en"]["web_label"]
+    assert parts[-2].startswith(STRINGS["en"]["sources"] + ":") and "https://example.org/wc" in parts[-2]
+    assert "https://example.org/wc" not in "\n\n".join(parts[:-2])            # the body itself carries no second copy of the links
+
+
+def test_rules_answer_text_ends_with_a_sources_line_then_the_disclaimer(agent):
+    out = agent("How many overs can one bowler bowl in T20I?")
+    parts = out["answer"].split("\n\n")
+    assert parts[-1] == STRINGS["en"]["disclaimer"] and parts[-2].startswith(STRINGS["en"]["sources"] + ":")
+
+
 def test_general_qa_can_be_switched_off(agent, fake_web, monkeypatch):
     monkeypatch.setattr(settings.features, "general_qa_enabled", False)
     out = agent("Who won the football world cup?")

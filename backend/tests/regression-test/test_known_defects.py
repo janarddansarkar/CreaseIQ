@@ -14,6 +14,8 @@ REG-011  tests must never touch the real memory database
 REG-012  an off-corpus question naming a format was answered from unrelated passages (format name inflated the reranker score)
 REG-013  a correct answer citing a clause printed inside a page-level passage ('13.9.1' in passage 'p23') was rejected, so the agent abstained
 REG-014  the test suite shipped questions and answers to LangSmith because .env enables tracing
+REG-015  plural/list clause references ('clauses 14 and 15') bypassed answer validation, so invented clauses could be cited
+REG-016  web answers showed their sources twice in the UI (inline text block AND the web-sources panel)
 """
 import fakeredis
 import pytest
@@ -217,3 +219,29 @@ def test_reg014_tests_never_send_traces_to_langsmith():
     import os
     from langsmith.utils import tracing_is_enabled
     assert os.environ["LANGSMITH_TRACING"] == "false" and not tracing_is_enabled()
+
+
+# ---- REG-015 ---------------------------------------------------------------------------------------------------
+def test_reg015_the_exact_answer_that_slipped_through_in_the_ui_is_now_rejected():
+    body = ("In T20I a bowler can bowl a maximum of four overs in an innings (clause 13.9.1). The follow-on and declaration are not allowed "
+            "in T20I cricket (clauses 14 and 15). The overs can be adjusted (clauses 13.7.1.1-13.7.1.4).")
+    passages = tools.TOOLS["search_t20i_rules"].invoke({"query": "how many overs can one bowler bowl in an innings", "top_k": 3})
+    cites = rag.build_citations([passages[0]["chunk_id"]], passages)
+    state = {"response_language": "en", "format": "T20I", "retrieved_rules": passages, "answer_body": body, "citations": cites}
+    state["answer"] = rag.render_answer(state, body, cites)
+    out = rag.validate_final_answer(state)
+    assert out["validation_status"] == "failed"
+    assert {"unknown_clause:14", "unknown_clause:15"} <= set(out["validation_issues"])
+
+
+def test_reg015_singular_references_still_work_and_prose_numbers_are_not_clauses():
+    assert rag.referenced_clauses("under clause 13.9.1 and 4 overs, with clauses 13.9.2 and 13.9.3") == ["13.9.1", "13.9.2", "13.9.3"]
+
+
+# ---- REG-016 ---------------------------------------------------------------------------------------------------
+def test_reg016_web_answer_layout_the_ui_relies_on(agent, fake_web):
+    out = agent("Who won the football world cup?")
+    parts = out["answer"].split("\n\n")
+    assert out["status"] == "answered_general" and len(parts) >= 3
+    assert parts[-2].startswith("Sources:") and parts[-1].startswith("General answer from web search")
+    assert out["values"]["web_sources"]      # the structured list the UI renders instead of the text block

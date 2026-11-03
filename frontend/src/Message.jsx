@@ -1,4 +1,6 @@
 // Presentation only: renders the backend's status, text and citations without interpreting them.
+import { splitAnswer } from './answer'
+
 const STATUS = {
   answered: null,
   answered_general: { label: 'General answer (web)', tone: 'info' },
@@ -9,20 +11,13 @@ const STATUS = {
   error: { label: 'Error', tone: 'err' },
 }
 
-// The backend appends "Sources: …" and a disclaimer as the last two paragraphs; show them as structured UI instead.
-function splitAnswer(text, hasCitations) {
-  const parts = (text || '').split(/\n\n+/)
-  if (hasCitations && parts.length >= 3) return { body: parts.slice(0, -2).join('\n\n'), disclaimer: parts[parts.length - 1] }
-  return { body: text || '', disclaimer: '' }
-}
-
 export default function Message({ m, showFormatChoices, onChoose }) {
   if (m.role === 'user') {
     return <div className="row user"><div className="bubble">{m.text}</div></div>
   }
   const st = STATUS[m.status]
   const cites = m.citations || []
-  const { body, disclaimer } = splitAnswer(m.text, cites.length > 0)
+  const { body, disclaimer } = splitAnswer(m.text, cites.length > 0 || m.web_sources?.length > 0)      // both kinds of sources are shown as their own panel
   return (
     <div className="row assistant">
       <div className={`bubble ${m.status === 'error' ? 'error' : ''}`}>

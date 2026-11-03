@@ -14,6 +14,8 @@ from state import Analysis
 from tools import TOOL_FORMAT, TOOLS
 
 _CLAUSE_REF = re.compile(LEXICON["routing"]["clause_ref_pattern"], re.I)
+_CLAUSE_LIST = re.compile(LEXICON["routing"]["clause_list_pattern"], re.I)
+_LIST_SPLIT = re.compile(r"\s*(?:,|;|&|[-–]|\b(?:and|or|to)\b)\s*", re.I)
 _REF_STRIP = LEXICON["routing"]["answer_ref_strip_chars"]
 _CITATION_FIELDS = ("source_id", "source_title", "version", "format", "clause_number", "printed_page_start")
 
@@ -44,6 +46,21 @@ def evidence_for_reasoning(state):
     return [p for p in state["retrieved_rules"] if p["retrieval_score"] >= settings.retrieval.min_score]
 
 
+def referenced_clauses(text: str) -> list[str]:
+    """Every clause number a text refers to (lower-case, de-duplicated, in order): 'clause 13.9.1', plurals and lists ('clauses 14 and 15',
+    'clauses 13.9.1, 13.9.2 and 13.9.3'), ranges ('clauses 13.7.1.1-13.7.1.4': both ends) and 'clause 13.9.1 and 13.9.2'. The singular-only pattern let
+    'clauses 14 and 15' through unchecked, so an answer could cite clauses that were never retrieved. After a singular 'clause', only dotted numbers
+    continue the list, so 'clause 13.9.1 and 4 overs' does not make '4' a clause."""
+    found = []
+    for tok in _CLAUSE_REF.findall(text):
+        found += re.split(r"(?<=\d)[-–](?=\d)", tok)
+    for keyword, listing in _CLAUSE_LIST.findall(text):
+        parts = [t for t in _LIST_SPLIT.split(listing) if t]
+        found += parts if keyword.lower() == "clauses" else parts[:1] + [t for t in parts[1:] if "." in t]
+    cleaned = [t.rstrip(_REF_STRIP).lower() for t in found]
+    return list(dict.fromkeys(t for t in cleaned if re.search(r"\w", t)))
+
+
 _CLAUSE_HEADING = re.compile(r"(?<![\w.])(\d+(?:\.\d+)+)(?=\s+[A-Z(])")      # a numbered heading inside a passage: '13.9.1 No bowler shall ...' (not a time or a measurement)
 
 
@@ -53,7 +70,7 @@ def allowed_clauses(passages: list[dict]) -> set[str]:
     without the headings an answer that correctly says 'clause 13.9.1' was rejected and the agent abstained on a question it could answer."""
     allowed = {p["clause_number"].lower() for p in passages}
     for p in passages:
-        allowed |= {m.rstrip(_REF_STRIP).lower() for m in _CLAUSE_REF.findall(p["text"])}
+        allowed |= set(referenced_clauses(p["text"]))
         allowed |= {m.lower() for m in _CLAUSE_HEADING.findall(p["text"])}
     return allowed
 
@@ -187,7 +204,7 @@ def validate_final_answer(state):
     if not state.get("citations"):
         issues.append("no_citations")
     issues += [f"unknown_citation:{c['chunk_id']}" for c in state.get("citations", []) if c["chunk_id"] not in retrieved_ids]
-    issues += [f"unknown_clause:{m.rstrip(_REF_STRIP)}" for m in _CLAUSE_REF.findall(state.get("answer_body", "")) if m.rstrip(_REF_STRIP).lower() not in retrieved_clauses]
+    issues += [f"unknown_clause:{c}" for c in referenced_clauses(state.get("answer_body", "")) if c not in retrieved_clauses]
     if S(state, "disclaimer") not in state.get("answer", ""):
         issues.append("missing_disclaimer")
     return {"validation_status": "failed" if issues else "passed", "validation_issues": issues}
