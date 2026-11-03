@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { getLanguages, sendChat } from './api'
+import { getLanguages, sendChatStream } from './api'
 import Message from './Message'
 
 const TIMEOUT_MS = 120000
@@ -9,6 +9,23 @@ const EXAMPLES = [
   'What does clause 21.18 say?',
   'Compare the free hit rule in ODI and T20I',
 ]
+
+const STEP_LABELS = {
+  input_guard: 'Checking your question',
+  understand_and_route: 'Understanding your question',
+  scope_gate: 'Checking format and scope',
+  context_gate: 'Checking for missing details',
+  cache_lookup: 'Looking for a cached answer',
+  retrieve_rules: 'Searching the playing conditions',
+  retrieval_tools: 'Searching the playing conditions',
+  check_evidence: 'Checking the evidence',
+  reformulate_query: 'Refining the search',
+  analyse_scenario: 'Analysing the scenario',
+  generate_answer: 'Writing the answer',
+  validate_final_answer: 'Verifying citations',
+  constrained_repair: 'Repairing the answer',
+  web_search: 'Searching the web',
+}
 
 const newId = () => (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 24) : String(Date.now()))
 
@@ -26,6 +43,7 @@ export default function App() {
   const [language, setLanguage] = useState('')
   const [languages, setLanguages] = useState({ en: 'English', hi: 'Hindi' })
   const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState('')
   const endRef = useRef(null)
   const abortRef = useRef(null)
 
@@ -48,13 +66,14 @@ export default function App() {
     abortRef.current = ctl
     const timer = setTimeout(() => ctl.abort('timeout'), TIMEOUT_MS)
     try {
-      const r = await sendChat({ conversationId: conv.id, message, language, signal: ctl.signal })
+      const r = await sendChatStream({ conversationId: conv.id, message, language, signal: ctl.signal, onStep: (n) => STEP_LABELS[n] && setStep(STEP_LABELS[n]) })
       setConv((c) => ({ ...c, id: r.conversation_id, messages: [...c.messages, { role: 'assistant', ...r, text: r.message }] }))
     } catch (e) {
       const text = ctl.signal.aborted ? (ctl.signal.reason === 'timeout' ? 'The request timed out. Please try again.' : 'Cancelled.') : e.message || 'Something went wrong.'
       setConv((c) => ({ ...c, messages: [...c.messages, { role: 'assistant', status: 'error', text, citations: [] }] }))
     } finally {
       clearTimeout(timer)
+      setStep('')
       setLoading(false)
     }
   }
@@ -105,7 +124,7 @@ export default function App() {
           <Message key={i} m={m} showFormatChoices={m === last && awaitingClarification && !loading} onChoose={send} />
         ))}
         {loading && (
-          <div className="row assistant"><div className="bubble typing" aria-label="Thinking"><i /><i /><i /></div></div>
+          <div className="row assistant"><div className="bubble typing" aria-label="Thinking"><i /><i /><i />{step && <span style={{ marginLeft: 8, fontSize: 13, opacity: 0.7 }}>{step}…</span>}</div></div>
         )}
         <div ref={endRef} />
       </main>

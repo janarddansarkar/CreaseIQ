@@ -10,7 +10,7 @@
 env_file  = ".env"                   # relative to backend/
 
 [settings.llm]
-use_stub          = true             # true: offline rule-based stub (no model server needed). false: OpenAI-compatible endpoint (local Ollama)
+use_stub          = false            # true: offline rule-based stub (no model server needed). false: OpenAI-compatible endpoint (local Ollama)
 structured_method = "json_schema"    # for with_structured_output; try "function_calling" if Ollama rejects it
 structured_attempts = 2              # tries per structured call before the node records an error
 base_url_env      = "OLLAMA_BASE_URL"

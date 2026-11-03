@@ -11,7 +11,7 @@ from guardrails import sanitize_input
 from memory import MemoryStore, get_store
 
 
-def ask(graph, text: str, user_id: str, language: Optional[str] = None, show: bool = True, store: Optional[MemoryStore] = None) -> dict:
+def ask(graph, text: str, user_id: str, language: Optional[str] = None, show: bool = True, store: Optional[MemoryStore] = None, on_step=None) -> dict:
     """Redact PII from `text`, run the graph on this user's conversation (thread = user_id), and return status, answer, node path and final state.
 
     Memory: registers the user (evicting the oldest user when over the cap), loads their long-term profile into the run, then records the
@@ -26,6 +26,9 @@ def ask(graph, text: str, user_id: str, language: Optional[str] = None, show: bo
     for chunk in graph.stream({"messages": [HumanMessage(clean)], "requested_language": language or profile["preferred_language"], "pii_found": pii,
                                "profile": profile, "history": build_history(past, profile), "prior_turn": prior_turn(past)}, config, stream_mode="updates"):
         path += list(chunk.keys())
+        if on_step:
+            for node in chunk:
+                on_step(node)
     v = graph.get_state(config).values
     store.record_turn(user_id, clean, v["answer"], v["status"], v.get("format"), v.get("clause_number"), make_digest(v))
     if v["status"] == "answered":       # only a verified answer teaches the profile
