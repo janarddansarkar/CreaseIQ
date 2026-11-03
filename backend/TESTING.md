@@ -6,7 +6,7 @@ All commands run from `backend/` with the project venv.
 |---|---|---|---|
 | Unit | `tests/unit-tests/` | Pure logic in isolation: config consistency, guardrails, routing decisions, routers, context/history, SQLite memory, Redis cache (fakeredis), RAG helpers, citation resolution, stub LLM, web-tool plumbing, API models | ~2 s |
 | Integration | `tests/integration-test/` | The real LangGraph graph + real hybrid knowledge base + real SQLite, with the deterministic stub model: answering, clarification, scope/safety, memory, cache, repair + requery safety net, failure handling, and the FastAPI app (REST + SSE) | ~12 s |
-| Regression | `tests/regression-test/` | Behaviour that must not change: one test per fixed defect (`REG-001…012`), 17 golden conversations replayed through the whole agent, a retrieval-recall baseline on the real knowledge base, and a routing-decision snapshot | ~7 s |
+| Regression | `tests/regression-test/` | Behaviour that must not change: one test per fixed defect (`REG-001…014`), 17 golden conversations replayed through the whole agent, a retrieval-recall baseline on the real knowledge base, and a routing-decision snapshot | ~7 s |
 | Frontend client | `tests/integration-test/frontend/` | The browser SSE client (`frontend/src/api.js`) against a faked `fetch` (Node's built-in runner, no install) | <1 s |
 | Live | `tests/integration-test/live/` | Real local Ollama model through the API | minutes |
 

@@ -136,3 +136,16 @@ def test_retrieval_format_leak_is_caught_by_the_release_gate(agent, monkeypatch)
     monkeypatch.setitem(rag.TOOLS, "search_t20i_rules", Leaky())
     out = agent(Q)
     assert out["status"] == "error"        # an ODI passage returned from the T20I tool must never reach an answer
+
+
+# ---- grounded clause numbers -------------------------------------------------------------------------------------
+def test_an_answer_citing_a_clause_printed_in_the_retrieved_page_is_accepted_without_repair(agent, monkeypatch):
+    calls = script(monkeypatch, ["Under clause 13.9.1 a bowler may bowl a maximum of four overs in an innings."])
+    out = agent(Q)
+    assert out["status"] == "answered" and "constrained_repair" not in out["path"] and len(calls) == 1
+
+
+def test_an_invented_clause_number_is_still_rejected(agent, monkeypatch):
+    script(monkeypatch, ["Under clause 13.9.99 a bowler may bowl four overs."])
+    out = agent(Q)
+    assert out["status"] == "insufficient_evidence" and out["values"]["validation_issues"] == ["unknown_clause:13.9.99"]

@@ -12,6 +12,8 @@ REG-009  evicting a user left that user's graph checkpoints behind
 REG-010  the stream's step events must equal the executed node path
 REG-011  tests must never touch the real memory database
 REG-012  an off-corpus question naming a format was answered from unrelated passages (format name inflated the reranker score)
+REG-013  a correct answer citing a clause printed inside a page-level passage ('13.9.1' in passage 'p23') was rejected, so the agent abstained
+REG-014  the test suite shipped questions and answers to LangSmith because .env enables tracing
 """
 import fakeredis
 import pytest
@@ -188,3 +190,30 @@ def test_reg012_the_format_name_does_not_reach_the_reranker():
     with_name = t.invoke({"query": q, "top_k": 3})[0]["retrieval_score"]
     without = t.invoke({"query": rag.search_query(q), "top_k": 3})[0]["retrieval_score"]
     assert with_name >= settings.retrieval.min_score > without      # documents the bug: the raw query cleared the evidence bar, the cleaned one does not
+
+
+# ---- REG-013 ---------------------------------------------------------------------------------------------------
+def _validate_against_real_passages(body):
+    passages = tools.TOOLS["search_t20i_rules"].invoke({"query": "how many overs can one bowler bowl in an innings", "top_k": 3})
+    cites = rag.build_citations([passages[0]["chunk_id"]], passages)
+    state = {"response_language": "en", "format": "T20I", "retrieved_rules": passages, "answer_body": body, "citations": cites}
+    state["answer"] = rag.render_answer(state, body, cites)
+    return passages, rag.validate_final_answer(state)
+
+
+def test_reg013_a_clause_printed_in_the_real_retrieved_page_is_grounded():
+    passages, out = _validate_against_real_passages("Under clause 13.9.1 no bowler may bowl more than four overs in an innings.")
+    assert passages[0]["clause_number"] == "p23" and "13.9.1" in passages[0]["text"]      # the exact case that failed: page label, clause in the text
+    assert out == {"validation_status": "passed", "validation_issues": []}
+
+
+def test_reg013_an_invented_clause_is_still_rejected_against_the_real_passages():
+    _, out = _validate_against_real_passages("Under clause 13.9.99 no bowler may bowl more than four overs in an innings.")
+    assert out["validation_status"] == "failed" and "unknown_clause:13.9.99" in out["validation_issues"]
+
+
+# ---- REG-014 ---------------------------------------------------------------------------------------------------
+def test_reg014_tests_never_send_traces_to_langsmith():
+    import os
+    from langsmith.utils import tracing_is_enabled
+    assert os.environ["LANGSMITH_TRACING"] == "false" and not tracing_is_enabled()

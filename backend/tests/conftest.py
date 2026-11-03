@@ -23,6 +23,8 @@ _cfg = re.sub(r"^(use_stub\s*=\s*)\w+", r"\g<1>" + ("false" if LIVE else "true")
 os.environ["CREASEIQ_CONFIG"] = str(_TMP / "config.toml")
 os.environ["CREASEIQ_MEMORY_DB"] = str(_TMP / "memory.sqlite")
 os.environ["CREASEIQ_CACHE_PREFIX"] = "creaseiq-test"
+for _var in ("LANGSMITH_TRACING", "LANGCHAIN_TRACING_V2", "LANGSMITH_TRACING_V2"):      # tests must never ship questions/answers to LangSmith (.env enables tracing for the app)
+    os.environ[_var] = "false"
 sys.path.insert(0, str(BACKEND / "src"))
 
 

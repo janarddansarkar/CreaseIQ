@@ -151,3 +151,36 @@ def test_search_query_keeps_the_original_when_only_the_format_would_be_left(quer
 
 def test_search_query_does_not_touch_look_alike_words():
     assert rag.search_query("Android godis t200 runs") == "Android godis t200 runs"
+
+
+# ---- numbered headings inside a passage are grounded clause numbers -------------------------------------------------------------
+PAGE = P("T20I|p23|c0", clause="p23", text="Conduct. 13.9 Number of overs per bowler 13.9.1 No bowler shall bowl more than four (4) overs in an innings. "
+         "13.9.2 In a delayed match the limit is one-fifth. The interval is 10.20 to 10.35 and the pitch is 20.12 metres. See also v1.2.3 notes.")
+
+
+def test_allowed_clauses_include_numbered_headings_inside_a_page_passage():
+    allowed = rag.allowed_clauses([PAGE])
+    assert {"p23", "13.9", "13.9.1", "13.9.2"} <= allowed
+
+
+def test_allowed_clauses_exclude_times_measurements_and_version_strings():
+    allowed = rag.allowed_clauses([PAGE])
+    assert not ({"10.20", "10.35", "20.12", "1.2.3", "13.10", "99.9"} & allowed)
+
+
+def test_a_clause_printed_in_the_retrieved_page_text_passes_validation():
+    body = "A bowler may bowl a maximum of four overs in an innings under clause 13.9.1."
+    cites = rag.build_citations([PAGE["chunk_id"]], [PAGE])
+    state = {"response_language": "en", "format": "T20I", "retrieved_rules": [PAGE], "answer_body": body, "citations": cites}
+    state["answer"] = rag.render_answer(state, body, cites)
+    assert rag.validate_final_answer(state)["validation_status"] == "passed"
+
+
+@pytest.mark.parametrize("invented", ["13.10", "99.9.9", "10.20", "20.12"])
+def test_clauses_not_printed_as_headings_are_still_rejected(invented):
+    body = f"The limit is stated in clause {invented}."
+    cites = rag.build_citations([PAGE["chunk_id"]], [PAGE])
+    state = {"response_language": "en", "format": "T20I", "retrieved_rules": [PAGE], "answer_body": body, "citations": cites}
+    state["answer"] = rag.render_answer(state, body, cites)
+    out = rag.validate_final_answer(state)
+    assert out["validation_status"] == "failed" and f"unknown_clause:{invented}" in out["validation_issues"]

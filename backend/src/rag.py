@@ -44,11 +44,17 @@ def evidence_for_reasoning(state):
     return [p for p in state["retrieved_rules"] if p["retrieval_score"] >= settings.retrieval.min_score]
 
 
+_CLAUSE_HEADING = re.compile(r"(?<![\w.])(\d+(?:\.\d+)+)(?=\s+[A-Z(])")      # a numbered heading inside a passage: '13.9.1 No bowler shall ...' (not a time or a measurement)
+
+
 def allowed_clauses(passages: list[dict]) -> set[str]:
-    """Clause numbers an answer may mention (lower-case): those of the retrieved passages plus clauses their text refers to ('as in clause 6.1')."""
+    """Clause numbers an answer may mention (lower-case): those of the retrieved passages, clauses their text refers to ('as in clause 6.1'), and the
+    numbered headings printed inside the passages. A page-level passage is labelled 'p23' but contains '13.9.1 No bowler shall bowl more than ...';
+    without the headings an answer that correctly says 'clause 13.9.1' was rejected and the agent abstained on a question it could answer."""
     allowed = {p["clause_number"].lower() for p in passages}
     for p in passages:
         allowed |= {m.rstrip(_REF_STRIP).lower() for m in _CLAUSE_REF.findall(p["text"])}
+        allowed |= {m.lower() for m in _CLAUSE_HEADING.findall(p["text"])}
     return allowed
 
 
