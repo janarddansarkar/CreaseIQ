@@ -116,7 +116,7 @@ def requery_original(state):
 def resolve_citation(cid: str, passages: list[dict]) -> Optional[str]:
     """Models cite sloppily: the whole evidence header, the clause number, or header fragments. Map each cited string to a RETRIEVED passage
     by chunk id or clause number. A bare format name is noise and is dropped. Anything else is kept unchanged so validation rejects it."""
-    for cand in (cid, cid.split("|")[0]):
+    for cand in (cid, cid.split(" | ")[0], cid.split("|")[0]):      # the whole header "[chunk_id | clause N | FMT]" (chunk ids themselves contain "|"), its first field, or the first "|" part
         key = re.sub(r"^[\[\s'\"]+|[\]\s'\"]+$", "", cand)
         key = re.sub(r"^clause\s+", "", key, flags=re.I).lower()
         for p in passages:

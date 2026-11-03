@@ -1,0 +1,18 @@
+{
+  "_comment": "Retrieval recall baseline on the real knowledge base (BM25 + semantic + reranker). 'phrase' must appear in the text of one of the top `within` passages; 'clause_top1' must be the clause of the best passage. 'abstain' cases must score below retrieval.min_score so the agent abstains instead of guessing.",
+  "recall": [
+    {"format": "T20I", "query": "How many overs can one bowler bowl in an innings?", "phrase": "four (4) overs", "within": 2},
+    {"format": "ODI",  "query": "How many overs can one bowler bowl in an innings?", "phrase": "10 overs", "within": 3},
+    {"format": "T20I", "query": "What is a free hit?", "phrase": "Free hit", "within": 1, "clause_top1": "21.18"},
+    {"format": "ODI",  "query": "What is a free hit?", "phrase": "Free hit", "within": 1, "clause_top1": "21.18"},
+    {"format": "T20I", "query": "What is the Super Over?", "phrase": "Super Over", "within": 1},
+    {"format": "T20I", "query": "What counts as a wide ball?", "phrase": "Wide", "within": 1, "clause_top1": "22.5"},
+    {"format": "T20I", "query": "Powerplay fielding restrictions", "phrase": "Powerplay", "within": 1},
+    {"format": "ODI",  "query": "Powerplay fielding restrictions", "phrase": "Powerplay", "within": 1},
+    {"format": "T20I", "query": "What happens after a no ball?", "phrase": "No ball", "within": 1}
+  ],
+  "abstain": [
+    {"format": "T20I", "query": "Strategic timeout"},
+    {"format": "T20I", "query": "How are crowd disturbances handled in the stadium?"}
+  ]
+}

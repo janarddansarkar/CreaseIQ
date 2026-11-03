@@ -23,6 +23,7 @@ httpx
 # Dev / test
 pytest
 pytest-asyncio
+fakeredis      # in-memory Redis for the cache tests
 httpx
 ruff
 langchain
