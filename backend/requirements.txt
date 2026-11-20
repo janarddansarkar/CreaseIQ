@@ -117,6 +117,8 @@ pytest==9.2.0
 pytest-asyncio==1.4.1.post1
 python-dateutil==4.0.0
 python-dotenv==1.2.4
+python-multipart==0.0.34
+    # via -r requirements.in
 pyyaml==6.0.3
 pyzmq==27.2.0
 redis==8.1.0

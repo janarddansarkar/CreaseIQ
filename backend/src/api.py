@@ -136,4 +136,8 @@ async def chat_stream(req: ChatRequest):
     return StreamingResponse(events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+from kb_admin import admin_router, public_router
+
 app.include_router(router)
+app.include_router(public_router)
+app.include_router(admin_router)

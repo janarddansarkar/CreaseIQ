@@ -90,6 +90,15 @@ min_term_overlap = 0.75              # AND the key terms (content words) of both
 max_entries_per_bucket = 200         # oldest entries are evicted beyond this
 connect_timeout = 0.5                # seconds; a dead Redis is skipped quickly
 
+[settings.admin]                             # knowledge-base admin API (upload a rulebook -> staged rebuild -> swap)
+token_env       = "CREASEIQ_ADMIN_TOKEN"     # env var holding the admin token; unset = the admin endpoints are disabled
+max_upload_mb   = 50
+min_pages       = 5                          # a rulebook shorter than this is rejected as not a real PDF rulebook
+min_text_ratio  = 0.5                        # share of pages that must contain extractable text (rejects scanned images)
+archive_dir     = "docs/archive"             # replaced PDFs are kept here, timestamped
+manifest_name   = "kb_manifest.json"         # written next to the indexes (backend/kb/)
+jobs_kept       = 20
+
 [settings.stub]                               # offline stand-in model
 max_cited_passages = 2
 max_quote_chars    = 300             # the stub quotes only this much of each passage

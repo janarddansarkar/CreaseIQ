@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { getLanguages, sendChatStream } from './api'
+import { getKb, getLanguages, sendChatStream } from './api'
 import Message from './Message'
 
 const TIMEOUT_MS = 120000
@@ -41,12 +41,14 @@ export default function App() {
   const [conv, setConv] = useState(loadConv)
   const [input, setInput] = useState('')
   const [language, setLanguage] = useState('')
+  const [kb, setKb] = useState(null)
   const [languages, setLanguages] = useState({ en: 'English', hi: 'Hindi' })
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState('')
   const endRef = useRef(null)
   const abortRef = useRef(null)
 
+  useEffect(() => { getKb().then(setKb).catch(() => {}) }, [])
   useEffect(() => { getLanguages().then((d) => setLanguages(d.languages)).catch(() => {}) }, [])
   useEffect(() => {
     try { localStorage.setItem('creaseiq', JSON.stringify(conv)) } catch { /* ignore */ }
@@ -87,6 +89,9 @@ export default function App() {
   const onKey = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) }
   }
+
+  const kbDate = kb?.updated_at && new Date(kb.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  const kbTitle = (kb?.documents || []).map((d) => `${d.format}: ${d.title}${d.version ? ` (${d.version})` : ''}`).join('\n')
 
   return (
     <div className="app">
@@ -140,7 +145,10 @@ export default function App() {
           aria-label="Message"
         />
         <button className="send" onClick={() => send(input)} disabled={loading || !input.trim()}>Send</button>
-        <p className="note">Informational only — not an official ruling by match officials.</p>
+        <p className="note">
+          Informational only — not an official ruling by match officials.
+          {kbDate && <span title={kbTitle}> · Knowledge base updated {kbDate}</span>}
+        </p>
       </footer>
     </div>
   )

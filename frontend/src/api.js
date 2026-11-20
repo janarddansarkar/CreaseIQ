@@ -12,6 +12,9 @@ async function call(path, opts) {
 
 export const getLanguages = () => call('/languages')
 
+/** { updated_at: ISO string | null, documents: [{ format, title, version, pages, chunks }] } */
+export const getKb = () => call('/kb')
+
 export function sendChat({ conversationId, message, language, signal }) {
   return call('/chat', {
     method: 'POST',

@@ -14,6 +14,19 @@ _KB = HybridRetriever(_KB_CFG)                       # fails fast if the knowled
 RRF_MAX = 2 / (_KB_CFG.rrf_k + 1)                    # best possible fused score (rank 1 in both indexes)
 
 
+def reload_kb(cfg=None) -> None:
+    """Open the freshly built indexes and make them the live retriever (used after an admin upload swaps the knowledge base).
+
+    The new retriever is fully constructed first, so a failure leaves the old one serving. The response cache is keyed by a
+    fingerprint of bm25.json, so its cached copy is dropped to start a new key space (old answers are never served)."""
+    global _KB
+    from chromadb.api.shared_system_client import SharedSystemClient
+    from cache import get_cache
+    SharedSystemClient.clear_system_cache()                 # Chroma caches clients by path; the path now holds new files
+    _KB = HybridRetriever(cfg or _KB_CFG)
+    get_cache()._kb = None
+
+
 def _search(fmt: str, query: str, top_k: int | None) -> list[dict]:
     """Hybrid-search one format's Playing Conditions and return passages in the workflow schema."""
     if not query.strip():
