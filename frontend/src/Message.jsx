@@ -31,7 +31,7 @@ export default function Message({ m, showFormatChoices, onChoose }) {
               {cites.map((c, i) => (
                 <li key={c.chunk_id || i}>
                   <strong>{c.source_title || 'Source'}</strong>
-                  <span>{[c.clause_number && `clause ${c.clause_number}`, c.page && `p.${c.page}`, c.version].filter(Boolean).join(' · ')}</span>
+                  <span>{[c.clause_number && !/^p\d+$/.test(c.clause_number) && `clause ${c.clause_number}`, c.page && `p.${c.page}`, c.version].filter(Boolean).join(' · ')}</span>
                 </li>
               ))}
             </ul>
