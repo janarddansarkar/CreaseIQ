@@ -66,3 +66,22 @@ select, .ghost { font: inherit; font-size: 14px; padding: 7px 10px; border-radiu
 .send:disabled { opacity: .45; cursor: default; }
 .note { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted); text-align: center; }
 @media (max-width: 520px) { .bubble { max-width: 96%; } .controls { width: 100%; } .controls > * { flex: 1; } }
+
+/* admin page */
+.admin .thread { gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { margin: 0; font-size: 17px; }
+.card label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+.card input[type="text"], .card input[type="password"], .card input[type="file"] { font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
+.card input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.muted { margin: 0; font-size: 13px; color: var(--muted); }
+.docs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.docs li { display: flex; flex-direction: column; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 14px; }
+.docs li span { color: var(--muted); font-size: 13px; }
+.admin .send { align-self: flex-start; }
+.admin .send:disabled { opacity: .5; cursor: default; }
+.admin .ghost { text-decoration: none; }
+.msg { margin: 0; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
+.msg.err { background: var(--err-bg); color: var(--err); }
+.msg.ok { background: var(--accent); color: var(--accent-ink); }
+.msg.info { background: var(--info-bg); color: var(--info); }

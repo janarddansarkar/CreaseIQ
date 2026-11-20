@@ -57,3 +57,15 @@ export async function sendChatStream({ conversationId, message, language, signal
   }
   throw new Error('Stream ended without a result')
 }
+
+/** Admin: upload a replacement rulebook. Resolves { job_id, status }. */
+export function uploadDocument({ token, file, format, version }) {
+  const body = new FormData()
+  body.append('file', file)
+  body.append('format', format)
+  body.append('version', version || '')
+  return call('/admin/documents', { method: 'POST', headers: { 'X-Admin-Token': token }, body })
+}
+
+/** Admin: progress of an upload job: { id, status: queued|building|checking|swapping|done|failed, detail, ... } */
+export const getJob = (token, id) => call(`/admin/jobs/${encodeURIComponent(id)}`, { headers: { 'X-Admin-Token': token } })
